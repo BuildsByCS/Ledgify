@@ -106,54 +106,93 @@ async function createTransaction(req, res){
     }
 
 
+  let transaction;
+
+  try {
+
     /**
      * - 5) Create transaction (PENDING)
-    */
-   
-   const session = await mongoose.startSession();
-   session.startTransaction();
+     */
 
-    const transaction = await transactionModel.create({
-        fromAccount,
-        toAccount,
-        amount,
-        idempotencyKey,
-        status: "PENDING"
-    }, { session })
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    transaction = (
+      await transactionModel.create(
+        [
+          {
+            fromAccount,
+            toAccount,
+            amount,
+            idempotencyKey,
+            status: "PENDING",
+          },
+        ],
+        { session },
+      )
+    )[0];
 
     /** - 6) Create DEBIT ledger entry */
-    const debitLedgerEntry = await ledgerModel.create({
-        account: fromAccount,
-        amount: amount,
-        transaction: transaction._id,
-        type: "DEBIT"
-    }, { session })
+    const debitLedgerEntry = await ledgerModel.create(
+      [
+        {
+          account: fromAccount,
+          amount: amount,
+          transaction: transaction._id,
+          type: "DEBIT",
+        },
+      ],
+      { session },
+    );
+
+    // await (() => {
+    //   return new Promise((resolve) => setTimeout(resolve, 1000 * 15));
+    // })();
+    // Simulating some delay in transaction process:
+    // e.g amount is Debit but not credit to account due to some delay in processing or some issue & 
+    // user retry with new req. then a new transaction should not be created with the same idempotency key
+    // so for retry req. we return current transaction is still pending
+    // & when its completed then return transaction completed with the transaction details
+
 
     /** - 7) Create CREDIT ledger entry */
-    const creditLedgerEntry = await ledgerModel.create({
-        account: toAccount,
-        amount: amount,
-        transaction: transaction._id,
-        type: "CREDIT"
-    }, { session })
+    const creditLedgerEntry = await ledgerModel.create(
+      [
+        {
+          account: toAccount,
+          amount: amount,
+          transaction: transaction._id,
+          type: "CREDIT",
+        },
+      ],
+      { session },
+    );
 
     /** - 8) Mark transaction COMPLETED */
-    transaction.status = "COMPLETED"
-    await transaction.save({ session });
 
+    await transactionModel.findOneAndUpdate(
+      { _id: transaction._id },
+      { status: "COMPLETED" },
+      { session },
+    );
 
-    /** 
-     * - 9) Commit MongoDB session 
-    */
+    /**
+     * - 9) Commit MongoDB session
+     */
     await session.commitTransaction();
     session.endSession();
+  } catch (error) {
+    return res.status(400).json({
+        message: "Transaction is pending due to some error, please retry after some time",
+    })
+  }
 
 
     /**
      * - 10) Send email notification
      */
 
-    await emailService.sendTransactionEmail( req.user.email, res.user.name, amount, toAccount );
+    await emailService.sendTransactionEmail( req.user.email, req.user.name, amount, toAccount );
 
     return res.status(201).json({
         message: "Transaction completed successfully",
@@ -162,7 +201,92 @@ async function createTransaction(req, res){
 
 }
 
+async function createInitialFundsTransaction(req, res){
+
+    const { toAccount, amount, idempotencyKey } = req.body;
+
+    if( !toAccount || !amount || !idempotencyKey ){
+        return res.status(400).json({
+            message: "toAccount, amount & idempotencyKey are required"
+        })
+    }
+
+    const toUserAccount = await accountModel.findOne({
+        _id: toAccount
+    })
+
+    if(!toUserAccount){
+        return res.status(400).json({
+            message: "Invalid toAccount"
+        })
+    }
+
+    const fromUserAccount = await accountModel.findOne({
+        user: req.user._id
+    })
+
+    if(!fromUserAccount){
+        return res.status(400).json({
+            message: "System user account not found"
+        })
+    }
+
+
+    let transaction;
+
+    try {
+
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    transaction = (await transactionModel.create([{
+        fromAccount: fromUserAccount._id,
+        toAccount,
+        amount,
+        idempotencyKey,
+        status: "PENDING"
+    }], { session })) [0]
+
+    const debitLedgerEntry = await ledgerModel.create([{
+        account: fromUserAccount._id,
+        amount: amount,
+        transaction: transaction._id,
+        type: "DEBIT"
+    }], { session })
+
+    const creditLedgerEntry = await ledgerModel.create([{
+        account: toAccount,
+        amount: amount,
+        transaction: transaction._id,
+        type: "CREDIT"
+    }], { session })
+
+
+    await transactionModel.findOneAndUpdate(
+        { _id: transaction._id },
+        { status: "COMPLETED" },
+        { session }
+    )
+
+    await session.commitTransaction()
+    session.endSession()
+
+    } catch (error) {
+        res.status(400).json({ 
+            message: "Initial funds transaction is pending due to some error, please retry after some time",
+        })
+    }
+
+    return res.status(201).json({
+        message: "Initial funds transaction completed successfully",
+        transaction: transaction
+    })
+
+
+}
+
 
 module.exports = {
-    createTransaction
+    createTransaction,
+    createInitialFundsTransaction
 }

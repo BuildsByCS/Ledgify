@@ -12,4 +12,11 @@ const transactionRoutes = Router();
 transactionRoutes.post("/", authMiddleware.authUserMiddleware, transactionController.createTransaction)
 
 
+/**
+ * - POST /api/transactions/system/initial-funds
+ * - create initial funds transaction form system user
+ */
+
+transactionRoutes.post("/system/initial-funds", authMiddleware.authSystemUserMiddleware, transactionController.createInitialFundsTransaction )
+
 module.exports = transactionRoutes;
