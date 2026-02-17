@@ -37,7 +37,7 @@ async function createTransaction(req, res){
 
     const fromUserAccount = await accountModel.findOne({ _id: fromAccount });
 
-    const toUserAccount = await accountModel.findOne({ _id: toAccount });
+    const toUserAccount = await accountModel.findOne({ _id: toAccount }).populate("user");
 
     if( !fromUserAccount || !toUserAccount ){
         return res.status(400).json({
@@ -192,7 +192,8 @@ async function createTransaction(req, res){
      * - 10) Send email notification
      */
 
-    await emailService.sendTransactionEmail( req.user.email, req.user.name, amount, toAccount );
+    await emailService.sendTransactionEmail( req.user.email, req.user.name, amount, fromAccount, toAccount, "debit", transaction._id );
+    await emailService.sendTransactionEmail( toUserAccount.user.email, toUserAccount.user.name, amount, fromAccount, toUserAccount._id, "credit", transaction._id );
 
     return res.status(201).json({
         message: "Transaction completed successfully",
@@ -213,7 +214,7 @@ async function createInitialFundsTransaction(req, res){
 
     const toUserAccount = await accountModel.findOne({
         _id: toAccount
-    })
+    }).populate("user")
 
     if(!toUserAccount){
         return res.status(400).json({
@@ -271,11 +272,17 @@ async function createInitialFundsTransaction(req, res){
     await session.commitTransaction()
     session.endSession()
 
+
+
     } catch (error) {
-        res.status(400).json({ 
+        return res.status(400).json({
             message: "Initial funds transaction is pending due to some error, please retry after some time",
         })
     }
+
+
+    await emailService.sendTransactionEmail( req.user.email, req.user.name, amount, fromUserAccount._id, toAccount, "debit", transaction._id );
+    await emailService.sendTransactionEmail( toUserAccount.user.email, toUserAccount.user.name, amount, fromUserAccount._id, toUserAccount._id, "credit", transaction._id );
 
     return res.status(201).json({
         message: "Initial funds transaction completed successfully",

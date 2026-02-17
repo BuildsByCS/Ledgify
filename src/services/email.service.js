@@ -152,19 +152,33 @@ The Ledgify Team
 }
 
 
-async function sendTransactionEmail( userEmail, name, amount, toAccount ){
-  const subject = "Transaction Successful!";
-  const text = `Hello ${name},\n\nYour transaction of $${amount} to account ${toAccount} was successful.\n\nBest regards,\nThe Backend Ledger Team`;
-  const html = `<p>Hello ${name},</p><p>Your transaction of $${amount} to account ${toAccount} was successful.</p><p>Best regards,<br>The Backend Ledger Team</p>`;
+async function sendTransactionEmail(userEmail, name, amount, fromAccount, toAccount, type, transactionId) {
+  let subject;
+  let text;
+  let html;
+
+  if (type === "debit") {
+    subject = "Transaction Successful: Funds Sent!";
+    text = `Hello ${name},\n\nYour transaction of Rs ${amount} to account ${toAccount} with transaction ID ${transactionId} was successful.\n\nBest regards,\nThe Ledgify Team`;
+    html = `<p>Hello ${name},</p><p>Your transaction of <strong>Rs ${amount}</strong> to account <strong>${toAccount}</strong> with transaction ID <strong>${transactionId}</strong> was successful.</p><p>Best regards,<br>The Ledgify Team</p>`;
+  } else if (type === "credit") {
+    subject = "Transaction Successful: Funds Received!";
+    text = `Hello ${name},\n\nYou have received Rs ${amount} from account ${fromAccount} with transaction ID ${transactionId}. The transaction was successful.\n\nBest regards,\nThe Ledgify Team`;
+    html = `<p>Hello ${name},</p><p>You have received <strong>Rs ${amount}</strong> from account <strong>${fromAccount}</strong> with transaction ID <strong>${transactionId}</strong>. The transaction was successful.</p><p>Best regards,<br>The Ledgify Team</p>`;
+  } else {
+    console.error("Invalid transaction email type provided.");
+    return;
+  }
 
   await sendEmail(userEmail, subject, text, html);
 }
 
-async function sendTransactionFailureEmail(userEmail, name, amount, toAccount) {
-  const subject = "Transaction Failed";
-  const text = `Hello ${name},\n\nWe regret to inform you that your transaction of $${amount} to account ${toAccount} has failed. Please try again later.\n\nBest regards,\nThe Backend Ledger Team`;
-  const html = `<p>Hello ${name},</p><p>We regret to inform you that your transaction of $${amount} to account ${toAccount} has failed. Please try again later.</p><p>Best regards,<br>The Backend Ledger Team</p>`;
 
+async function sendTransactionFailureEmail(userEmail, name, amount, fromAccount, toAccount) {
+  const subject = `Transaction Failed: $${amount} from ${fromAccount} to ${toAccount}`;
+  const text = `Hello ${name},\n\nWe regret to inform you that your transaction of $${amount} from account ${fromAccount} to account ${toAccount} has failed. Please try again later.\n\nBest regards,\nThe Ledgify Team`;
+  const html = `<p>Hello ${name},</p><p>We regret to inform you that your transaction of <strong>$${amount}</strong> from account <strong>${fromAccount}</strong> to account <strong>${toAccount}</strong> has failed. Please try again later.</p><p>Best regards,<br>The Ledgify Team</p>`;
+  
   await sendEmail(userEmail, subject, text, html);
 }
 
