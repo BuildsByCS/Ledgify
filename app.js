@@ -19,6 +19,11 @@ const transactionRoutes = require("./src/routes/transaction.routes");
 /**
  * - Used Routes
  */
+
+app.get("/", (req, res) => {
+    res.send("Ledgify service is running");
+})
+
 app.use("/api/auth", authRouter);
 app.use("/api/accounts", accountRouter);
 app.use("/api/transactions", transactionRoutes);
