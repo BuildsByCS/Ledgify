@@ -170,10 +170,10 @@ async function createTransaction(req, res){
 
     /** - 8) Mark transaction COMPLETED */
 
-    await transactionModel.findOneAndUpdate(
+    transaction = await transactionModel.findOneAndUpdate(
       { _id: transaction._id },
       { status: "COMPLETED" },
-      { session },
+      { session, returnDocument: "after" },
     );
 
     /**
