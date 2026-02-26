@@ -1,4 +1,5 @@
 const accountModel = require("../models/account.model");
+const ledgerModel = require("../models/ledger.model");
 
 
 async function createAccountController(req, res){
@@ -66,11 +67,6 @@ async function getTotalBalanceController(req, res) {
 }
 
 
-/**
- * - update account status controller
- * - POST /api/accounts/update-status?accountId=xxx&status=ACTIVE/CLOSED
- * - protected route
- */
 async function updateAccountStatusController(req, res){
   const { accountId, status } = req.query;
 
@@ -139,6 +135,105 @@ async function freezeAccountController(req, res){
 }
 
 
+async function getLedgerEntriesChart(req, res) {
+    const accountId = req.params.accountId;
+
+    if (!accountId) {
+        return res.status(400).json({
+            message: "accountId query parameter is required",
+        });
+    }
+
+    const account = await accountModel.findOne({
+        _id: accountId,
+        user: req.user._id,
+    });
+
+    if (!account) {
+        return res.status(404).json({
+            message: "Account not found for the user",
+        });
+    }
+
+    const endDate = new Date(); // current date
+    const startDate = new Date();
+    startDate.setDate(endDate.getDate() - 7); // 7 days ago
+
+    const transactions = await ledgerModel
+        .find(
+            {
+                account: accountId,
+                createdAt: {
+                    $gte: startDate, // greater than or equal to start date
+                    $lte: endDate,   // less than or equal to end date
+                },
+            },
+            { amount: 1, type: 1, createdAt: 1, _id: 0 } // projection
+        )
+        .sort({ createdAt: 1 }); // sort by creation date for chart display
+
+    return res.status(200).json({
+        accountId: accountId,
+        transactions: transactions,
+    });
+}
+
+
+async function getLedgerEntriesList(req, res) {
+    const { accountId, page = 1, limit = 10 } = req.query;
+
+    if (!accountId) {
+        return res.status(400).json({
+            message: "accountId query parameter is required",
+        });
+    }
+
+    const account = await accountModel.findOne({
+        _id: accountId,
+        user: req.user._id,
+    });
+
+    if (!account) {
+        return res.status(404).json({
+            message: "Account not found for the user",
+        });
+    }
+
+    const parsedPage = parseInt(page);
+    const parsedLimit = parseInt(limit);
+
+    if (isNaN(parsedPage) || parsedPage < 1) {
+        return res.status(400).json({ message: "Invalid page number. Must be a positive integer." });
+    }
+    if (isNaN(parsedLimit) || parsedLimit < 1) {
+        return res.status(400).json({ message: "Invalid limit. Must be a positive integer." });
+    }
+
+    const skip = (parsedPage - 1) * parsedLimit;
+
+    const transactions = await ledgerModel
+      .find({ account: accountId })
+      .select({ amount: 1, type: 1, createdAt: 1, transaction: 1, _id: 0 })
+      .sort({ createdAt: -1 }) // descending order: latest transactions first
+      .skip(skip)
+      .limit(parsedLimit);
+
+    const totalCount = await ledgerModel.countDocuments({ account: accountId });
+
+    return res.status(200).json({
+        accountId: accountId,
+        transactions: transactions,
+        pagination: {
+            currentPage: parsedPage,
+            totalPages: Math.ceil(totalCount / parsedLimit),
+            totalEntries: totalCount,
+            limit: parsedLimit,
+        },
+    });
+
+}
+
+
 module.exports = {
   createAccountController,
   getUserAccountsController,
@@ -146,4 +241,6 @@ module.exports = {
   getTotalBalanceController,
   updateAccountStatusController,
   freezeAccountController,
+  getLedgerEntriesChart,
+  getLedgerEntriesList,
 };

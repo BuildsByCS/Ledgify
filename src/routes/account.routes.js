@@ -38,6 +38,20 @@ router.get("/total-balance", authMiddleware.authUserMiddleware, accountControlle
 
 
 /**
+ * - GET /api/accounts/ledger-chart/:accountId
+ * - Get ledger entries for chart display (last 7 days)
+ */
+router.get("/ledger-chart/:accountId", authMiddleware.authUserMiddleware, accountController.getLedgerEntriesChart );
+
+
+/**
+ * - GET /api/accounts/ledger-list?accountId=xxx&page=1&limit=10
+ * - Get paginated ledger entries for list display
+ */
+router.get("/ledger-list", authMiddleware.authUserMiddleware, accountController.getLedgerEntriesList );
+
+
+/**
  * - POST /api/accounts/update-status?accountId=xxx&status=ACTIVE/CLOSED
  * - update account status to ACTIVE or CLOSED
  */
