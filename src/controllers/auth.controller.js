@@ -95,6 +95,41 @@ async function userLoginController(req, res){
 
 
 /**
+ * - get current logged in user details
+ * - GET /api/auth/me
+ */
+
+async function getCurrentUserController(req, res){
+  const token = req.cookies.token || req.headers.authorization?.split(" ")[1];
+
+  if(!token){
+    return res.status(401).json({
+      message: "Unauthorized, token not found",
+    })
+  }
+
+  const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+  const user = await userModel.findById(decoded.userId);
+
+  if(!user){
+    return res.status(404).json({
+      message: "User not found",
+    })
+  }
+
+  return res.status(200).json({
+    user: {
+      _id: user._id,
+      email: user.email,
+      name: user.name
+    }
+  })
+
+}
+
+
+/**
  * - user logout controller
  * - POST /api/auth/logout
  */
@@ -134,5 +169,6 @@ async function userLogoutController(req, res){
 module.exports = {
   userRegisterController,
   userLoginController,
+  getCurrentUserController,
   userLogoutController
 };

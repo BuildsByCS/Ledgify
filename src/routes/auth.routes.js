@@ -18,6 +18,12 @@ router.post("/login", authController.userLoginController);
 
 
 /**
+ * - GET /api/auth/me * - get current logged in user details
+ */
+router.get("/me", authController.getCurrentUserController);
+
+
+/**
  * - POST /api/auth/logout
  */
 router.post("/logout", authController.userLogoutController);

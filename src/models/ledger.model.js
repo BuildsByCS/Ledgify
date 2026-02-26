@@ -31,6 +31,8 @@ const ledgerSchema = new mongoose.Schema({
         immutable: true
     }
 
+}, {
+    timestamps: true
 })
 
 
