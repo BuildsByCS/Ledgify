@@ -212,6 +212,7 @@ async function createInitialFundsTransaction(req, res){
         })
     }
 
+    // validate toAccount
     const toUserAccount = await accountModel.findOne({
         _id: toAccount
     }).populate("user")
@@ -222,6 +223,7 @@ async function createInitialFundsTransaction(req, res){
         })
     }
 
+    // validate fromAccount (system user account)
     const fromUserAccount = await accountModel.findOne({
         user: req.user._id
     })
@@ -232,7 +234,40 @@ async function createInitialFundsTransaction(req, res){
         })
     }
 
+    // validate idempotency key
+    const isTransactionAlreadyExist = await transactionModel.findOne({
+        idempotencyKey: idempotencyKey
+    })
 
+    if(isTransactionAlreadyExist){
+        if(isTransactionAlreadyExist.status === "COMPLETED"){
+            return res.status(200).json({
+              message: "Transaction already processed",
+              transaction: isTransactionAlreadyExist,
+            });
+        }
+
+        if(isTransactionAlreadyExist.status === "PENDING"){
+            return res.status(200).json({
+                message: "Transaction is still processing"
+            })
+        }
+
+        if(isTransactionAlreadyExist.status === "FAILED"){
+            return res.status(500).json({
+                message: "Transaction processing failed, please retry"
+            })
+        }
+
+        if(isTransactionAlreadyExist.status === "REVERSED"){
+            return res.status(500).json({
+                message: "Transaction was reversed, please retry"
+            })
+        }
+    }
+
+
+    // start transaction process
     let transaction;
 
     try {

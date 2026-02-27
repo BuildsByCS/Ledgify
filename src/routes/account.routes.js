@@ -66,5 +66,13 @@ router.post("/update-status", authMiddleware.authUserMiddleware, accountControll
 router.post("/freeze/:accountId", authMiddleware.authSystemUserMiddleware, accountController.freezeAccountController);
 
 
+/**
+ * - POST /api/accounts/defreeze/:accountId
+ * - defreeze an account and ACTIVE it again
+ * - protected route, only system user can defreeze an account
+ */
+router.post("/defreeze/:accountId", authMiddleware.authSystemUserMiddleware, accountController.defreezeAccountController);
+
+
 module.exports = router;
 

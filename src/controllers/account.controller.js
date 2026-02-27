@@ -52,7 +52,7 @@ async function getAccountBalanceController(req, res){
 async function getTotalBalanceController(req, res) {
   const userId = req.user._id;
 
-  const accounts = await accountModel.find({ user: userId }).lean();
+  const accounts = await accountModel.find({ user: userId });
 
   let totalBalance = 0;
 
@@ -132,6 +132,34 @@ async function freezeAccountController(req, res){
     account
   })
 
+}
+
+
+async function defreezeAccountController(req, res) {
+  const accountId = req.params.accountId;
+
+  if (!accountId) {
+    return res.status(400).json({
+      message: "accountId parameter is required",
+    });
+  }
+
+  const account = await accountModel.findOneAndUpdate(
+    { _id: accountId },
+    { status: "ACTIVE" },
+    { new: true },
+  );
+
+  if (!account) {
+    return res.status(404).json({
+      message: "Account not found",
+    });
+  }
+
+  return res.status(200).json({
+    message: "Successfully defrozen and activated the account",
+    account,
+  });
 }
 
 
@@ -241,6 +269,7 @@ module.exports = {
   getTotalBalanceController,
   updateAccountStatusController,
   freezeAccountController,
+  defreezeAccountController,
   getLedgerEntriesChart,
   getLedgerEntriesList,
 };
