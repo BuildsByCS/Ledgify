@@ -1,5 +1,5 @@
 const mongoose = require("mongoose");
-const emailService = require("../services/email.service");
+// const emailService = require("../services/email.service");
 const accountModel = require("../models/account.model");
 const transactionModel = require("../models/transaction.model");
 const ledgerModel = require("../models/ledger.model");
@@ -189,16 +189,19 @@ async function createTransaction(req, res){
 
 
     /**
-     * - 10) Send email notification
+     * - 10) Send email notification : avoided it for the free tier deployment playforms
+     *    like render & vercel as they block the SMPT ports used for sending emails.
      */
 
-    await emailService.sendTransactionEmail( req.user.email, req.user.name, amount, fromAccount, toAccount, "debit", transaction._id );
-    await emailService.sendTransactionEmail( toUserAccount.user.email, toUserAccount.user.name, amount, fromAccount, toUserAccount._id, "credit", transaction._id );
+    // await emailService.sendTransactionEmail( req.user.email, req.user.name, amount, fromAccount, toAccount, "debit", transaction._id );
+    // await emailService.sendTransactionEmail( toUserAccount.user.email, toUserAccount.user.name, amount, fromAccount, toUserAccount._id, "credit", transaction._id );
+
 
     return res.status(201).json({
         message: "Transaction completed successfully",
         transaction: transaction
     })
+
 
 }
 
@@ -316,8 +319,13 @@ async function createInitialFundsTransaction(req, res){
     }
 
 
-    await emailService.sendTransactionEmail( req.user.email, req.user.name, amount, fromUserAccount._id, toAccount, "debit", transaction._id );
-    await emailService.sendTransactionEmail( toUserAccount.user.email, toUserAccount.user.name, amount, fromUserAccount._id, toUserAccount._id, "credit", transaction._id );
+    /** - Send email notification : avoided it for the free tier deployment playforms
+     *    like render & vercel as they block the SMPT ports used for sending emails.
+     */
+
+    // await emailService.sendTransactionEmail( req.user.email, req.user.name, amount, fromUserAccount._id, toAccount, "debit", transaction._id );
+    // await emailService.sendTransactionEmail( toUserAccount.user.email, toUserAccount.user.name, amount, fromUserAccount._id, toUserAccount._id, "credit", transaction._id );
+
 
     return res.status(201).json({
         message: "Initial funds transaction completed successfully",
