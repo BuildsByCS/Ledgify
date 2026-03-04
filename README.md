@@ -127,7 +127,7 @@ This document outlines the API routes for the Ledgify application, detailing the
     ```
 
 
-  - **`GET /api/accounts/all`**
+- **`GET /api/accounts/all`**
   - **Description**: Retrieves all financial accounts throughout the Ledgify platform along with its user details.
   - **Access**: Protected (`authMiddleware.authUserMiddleware`)
   - **Output**:
@@ -314,6 +314,38 @@ This document outlines the API routes for the Ledgify application, detailing the
             "createdAt": "2026-02-27T07:07:00.713Z",
             "updatedAt": "2026-02-27T07:07:00.868Z",
             "__v": 0
+        }
+    }
+    ```
+
+- **`GET /api/transactions?accountId=xxx&page=1&limit=10`**
+  - **Description**: Get all financial transactions.
+  - **Access**: Protected (`authMiddleware.authUserMiddleware`)
+  - **Parameters**:
+    - `accountId`: string (Query parameter) - The ID of the account.
+    - `page`: number (Query parameter) - The page number for pagination.
+    - `limit`: number (Query parameter) - The number of entries per page.
+  - **Output**:
+    ```json
+    {
+        "accountId": "698dd9f5f61fdbf005ae667d",
+        "transactions": [
+            {
+                "amount": 2000,
+                "transaction": {
+                    "_id": "69a8210ca862cceeb6a1076c",
+                    "fromAccount": "698dd9f5f61fdbf005ae667d",
+                    "toAccount": "69a137d4c804389d3ed3ba28"
+                },
+                "type": "DEBIT",
+                "createdAt": "2026-03-04T12:09:48.835Z"
+            }
+        ],
+        "pagination": {
+            "currentPage": 1,
+            "totalPages": 2,
+            "totalEntries": 18,
+            "limit": 10
         }
     }
     ```

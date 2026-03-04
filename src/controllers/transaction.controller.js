@@ -205,6 +205,64 @@ async function createTransaction(req, res){
 
 }
 
+async function getAllTransactionsByAccountId(req, res){
+
+    const { accountId, page = 1, limit = 10 } = req.query;
+
+    if (!accountId) {
+        return res.status(400).json({
+            message: "accountId query parameter is required",
+        });
+    }
+
+    const account = await accountModel.findOne({
+        _id: accountId,
+        user: req.user._id,
+    });
+
+    if (!account) {
+        return res.status(404).json({
+            message: "Account not found for the user",
+        });
+    }
+
+    const parsedPage = parseInt(page);
+    const parsedLimit = parseInt(limit);
+
+    if (isNaN(parsedPage) || parsedPage < 1) {
+        return res.status(400).json({ message: "Invalid page number. Must be a positive integer." });
+    }
+    if (isNaN(parsedLimit) || parsedLimit < 1) {
+        return res.status(400).json({ message: "Invalid limit. Must be a positive integer." });
+    }
+
+
+    const skip = (parsedPage - 1) * parsedLimit;
+
+    const transactions = await ledgerModel
+      .find({ account: accountId })
+      .populate("transaction", "_id fromAccount toAccount")
+      .select({ amount: 1, type: 1, createdAt: 1, transaction: 1, _id: 0 })
+      .sort({ createdAt: -1 }) // descending order: latest transactions first
+      .skip(skip)
+      .limit(parsedLimit);
+    
+    const totalCount = await ledgerModel.countDocuments({ account: accountId });
+
+
+    return res.status(200).json({
+        accountId: accountId,
+        transactions: transactions,
+        pagination: {
+            currentPage: parsedPage,
+            totalPages: Math.ceil(totalCount / parsedLimit),
+            totalEntries: totalCount,
+            limit: parsedLimit,
+        },
+    });
+
+}
+
 async function createInitialFundsTransaction(req, res){
 
     const { toAccount, amount, idempotencyKey } = req.body;
@@ -337,6 +395,7 @@ async function createInitialFundsTransaction(req, res){
 
 
 module.exports = {
-    createTransaction,
-    createInitialFundsTransaction
-}
+  createTransaction,
+  getAllTransactionsByAccountId,
+  createInitialFundsTransaction,
+};

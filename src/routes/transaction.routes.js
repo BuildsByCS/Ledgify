@@ -13,6 +13,14 @@ transactionRoutes.post("/", authMiddleware.authUserMiddleware, transactionContro
 
 
 /**
+ * - GET /api/transactions?accountId=xxx&page=1&limit=10
+ * - get all transactions of the user account with pagination
+ */
+
+transactionRoutes.get("/", authMiddleware.authUserMiddleware, transactionController.getAllTransactionsByAccountId)
+
+
+/**
  * - POST /api/transactions/system/initial-funds
  * - create initial funds transaction form system user
  */
