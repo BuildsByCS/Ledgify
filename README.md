@@ -133,21 +133,21 @@ This document outlines the API routes for the Ledgify application, detailing the
   - **Output**:
     ```json
     {
-    "allAccounts": [
-        {
-            "_id": "698dd9f5f61fdbf005ae667d",
-            "user": {
-                "_id": "698c7c6264eff8f4395babb8",
-                "email": "test@gmail.com",
-                "name": "test test"
+        "allAccounts": [
+            {
+                "_id": "...",
+                "user": {
+                    "_id": "...",
+                    "email": "...",
+                    "name": "..."
+                },
+                "status": "ACTIVE",
+                "currency": "INR",
+                "createdAt": "2026-02-12T13:47:33.420Z",
+                "updatedAt": "2026-03-04T06:22:09.583Z",
+                "__v": 0
             },
-            "status": "ACTIVE",
-            "currency": "INR",
-            "createdAt": "2026-02-12T13:47:33.420Z",
-            "updatedAt": "2026-03-04T06:22:09.583Z",
-            "__v": 0
-        },
-    ]
+        ]
     }
     ```
 
@@ -328,14 +328,14 @@ This document outlines the API routes for the Ledgify application, detailing the
   - **Output**:
     ```json
     {
-        "accountId": "698dd9f5f61fdbf005ae667d",
+        "accountId": "...id",
         "transactions": [
             {
                 "amount": 2000,
                 "transaction": {
-                    "_id": "69a8210ca862cceeb6a1076c",
-                    "fromAccount": "698dd9f5f61fdbf005ae667d",
-                    "toAccount": "69a137d4c804389d3ed3ba28"
+                    "_id": "...id",
+                    "fromAccount": "...id",
+                    "toAccount": "...id"
                 },
                 "type": "DEBIT",
                 "createdAt": "2026-03-04T12:09:48.835Z"
@@ -348,6 +348,35 @@ This document outlines the API routes for the Ledgify application, detailing the
             "limit": 10
         }
     }
+    ```
+
+- **`POST /api/transactions/get-bonus`**
+  - **Description**: Adds a bonus amount to the user account to perform demo, dont need system user to add intial-fund.
+  - **Access**: Protected (Can only add bonus to users own ACTIVE account via `authMiddleware.authUserMiddleware`)
+  - **Input**
+    ```json
+      {
+        "toAccount": "...id",
+        "idempotencyKey": "019cb929-d964-7918-bae9-f867d1de01c0"
+      }
+  
+    ```
+  - **Output**:
+    ```json
+      {
+          "message": "Bonus added successfully",
+          "transaction": {
+              "_id": "...id",
+              "fromAccount": "...id",
+              "toAccount": "...id",
+              "status": "COMPLETED",
+              "amount": 1000,
+              "idempotencyKey": "bonus-019cb929-d964-7918-bae9-f867d1de01c0",
+              "createdAt": "2026-03-04T14:04:21.795Z",
+              "updatedAt": "2026-03-04T14:04:21.895Z",
+              "__v": 0
+          }
+      }
     ```
 
 - **`POST /api/transactions/system/initial-funds`**

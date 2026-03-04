@@ -3,6 +3,7 @@ const mongoose = require("mongoose");
 const accountModel = require("../models/account.model");
 const transactionModel = require("../models/transaction.model");
 const ledgerModel = require("../models/ledger.model");
+const userModel = require("../models/user.model");
 
 
 
@@ -263,6 +264,163 @@ async function getAllTransactionsByAccountId(req, res){
 
 }
 
+async function getBonus(req, res){
+
+    const { idempotencyKey, toAccount } = req.body;
+
+    if(!idempotencyKey || !toAccount){
+        return res.status(400).json({
+            message: "Idempotency key and toAccount are required to add bonus"
+        })
+    }
+
+    /**
+     *  validate toAccount
+     */
+
+    const isValidToAccount = await accountModel.findOne({ _id: toAccount, user: req.user._id, status: "ACTIVE" });
+
+    if(!isValidToAccount){
+        return res.status(400).json({
+            message: "Invalid toAccount, it should be an ACTIVE account of the user"
+        })
+    }
+
+    /** 
+     *  create bonus amount & bonus idempotencykey
+    */
+    const bonusAmount = 1000;
+    const bonusIdempotencyKey = `bonus-${idempotencyKey}`;
+
+
+    /**
+     * get system user & its account
+     */
+
+    const systemUser = await userModel.findOne({ systemUser: true }).select({ systemUser: 1, _id: 1 });;
+
+    if (!systemUser) {
+      return res.status(500).json({
+        message: "System user not found, please contact support",
+      });
+    }
+
+    const systemUserAccount = await accountModel.findOne({ user: systemUser._id }).select({ _id: 1 });
+
+    if(!systemUserAccount){
+        return res.status(500).json({
+            message: "System user account not found, please contact support"
+        })
+    }
+
+
+    /**
+     * Check if bonus transaction already exists for the user
+     */
+
+    const existingBonusTransaction = await transactionModel.findOne({ bonusIdempotencyKey });
+
+    if(existingBonusTransaction){
+        if(existingBonusTransaction.status === "COMPLETED"){
+            return res.status(200).json({
+              message: "Bonus already added",
+              transaction: existingBonusTransaction,
+            });
+        }
+        if(existingBonusTransaction.status === "PENDING"){
+            return res.status(200).json({
+                message: "Bonus is still being added, please wait"
+            })
+        }
+        if(existingBonusTransaction.status === "FAILED"){
+            return res.status(500).json({
+                message: "Bonus adding failed, please retry"
+            })
+        }
+    }
+
+
+    /**
+     * create bonus transaction from system account to user account
+     */
+
+    let transaction;
+
+    try {
+        
+        // start transaction process
+        const session = await mongoose.startSession();
+        session.startTransaction();
+
+        // create a PENDING transaction
+        transaction = (
+          await transactionModel.create(
+            [
+              {
+                fromAccount: systemUserAccount._id,
+                toAccount,
+                amount: bonusAmount,
+                idempotencyKey: bonusIdempotencyKey,
+                status: "PENDING",
+              },
+            ],
+            { session },
+          )
+        )[0];
+
+        // debit ledger entry for system account
+        const debitLedgerEntry = await ledgerModel.create(
+            [
+                {
+                    account: systemUserAccount._id,
+                    amount: bonusAmount,
+                    transaction: transaction._id,
+                    type: "DEBIT",
+                },
+            ],
+            { session },
+        )
+
+        // credit ledger entry for user account
+        const creditLedgerEntry = await ledgerModel.create(
+            [
+                {
+                    account: toAccount,
+                    amount: bonusAmount,
+                    transaction: transaction._id,
+                    type: "CREDIT",
+                }
+            ],
+            { session },
+        )
+
+        // update transaction status to COMPLETED
+        transaction = await transactionModel.findOneAndUpdate(
+          { _id: transaction._id },
+          { status: "COMPLETED" },
+          { session, returnDocument: "after" },
+        );
+
+        // commit transaction
+        await session.commitTransaction();
+        session.endSession();
+
+
+    } catch (error) {
+        return res.status(500).json({
+            error: error.message,
+            message: "Error occured, please retry after some time",
+        })
+    }
+
+
+    return res.status(200).json({
+        message: "Bonus added successfully",
+        transaction: transaction
+    })
+
+}
+
 async function createInitialFundsTransaction(req, res){
 
     const { toAccount, amount, idempotencyKey } = req.body;
@@ -397,5 +555,6 @@ async function createInitialFundsTransaction(req, res){
 module.exports = {
   createTransaction,
   getAllTransactionsByAccountId,
+  getBonus,
   createInitialFundsTransaction,
 };

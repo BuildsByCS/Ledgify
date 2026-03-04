@@ -21,6 +21,14 @@ transactionRoutes.get("/", authMiddleware.authUserMiddleware, transactionControl
 
 
 /**
+ * - POST /api/transactions/add-bonus
+ * - add bonus amount to their account so they will be able to do a transaction without
+ *   system user to add bonus amount into their account
+ */
+transactionRoutes.post("/get-bonus", authMiddleware.authUserMiddleware, transactionController.getBonus)
+
+
+/**
  * - POST /api/transactions/system/initial-funds
  * - create initial funds transaction form system user
  */
