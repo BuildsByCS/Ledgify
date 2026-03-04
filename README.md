@@ -126,6 +126,32 @@ This document outlines the API routes for the Ledgify application, detailing the
     }
     ```
 
+
+  - **`GET /api/accounts/all`**
+  - **Description**: Retrieves all financial accounts throughout the Ledgify platform along with its user details.
+  - **Access**: Protected (`authMiddleware.authUserMiddleware`)
+  - **Output**:
+    ```json
+    {
+    "allAccounts": [
+        {
+            "_id": "698dd9f5f61fdbf005ae667d",
+            "user": {
+                "_id": "698c7c6264eff8f4395babb8",
+                "email": "test@gmail.com",
+                "name": "test test"
+            },
+            "status": "ACTIVE",
+            "currency": "INR",
+            "createdAt": "2026-02-12T13:47:33.420Z",
+            "updatedAt": "2026-03-04T06:22:09.583Z",
+            "__v": 0
+        },
+    ]
+    }
+    ```
+
+
 - **`GET /api/accounts/balance/:accountId`**
   - **Description**: Fetches the balance of a specific account identified by `accountId` for the logged-in user.
   - **Parameters**:

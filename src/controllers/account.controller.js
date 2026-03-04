@@ -26,6 +26,16 @@ async function getUserAccountsController(req, res){
 }
 
 
+async function getAllUsersAccountsController(req, res){
+  const allAccounts = await accountModel.find().populate("user", { "_id": 1, "email": 1, "name": 1 });
+
+  res.status(200).json({
+    allAccounts: allAccounts
+  })
+
+}
+
+
 async function getAccountBalanceController(req, res){
   const { accountId } = req.params;
 
@@ -265,6 +275,7 @@ async function getLedgerEntriesList(req, res) {
 module.exports = {
   createAccountController,
   getUserAccountsController,
+  getAllUsersAccountsController,
   getAccountBalanceController,
   getTotalBalanceController,
   updateAccountStatusController,
