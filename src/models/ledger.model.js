@@ -12,6 +12,7 @@ const ledgerSchema = new mongoose.Schema({
     amount: {
         type: Number,
         required: [ true, "Amount is required for creating a ledger entry"],
+        min: [ 1, "Amount should be a non-zero positive number"],
         immutable: true
     },
     transaction: {
@@ -27,7 +28,7 @@ const ledgerSchema = new mongoose.Schema({
             values: ["CREDIT", "DEBIT"],
             message: "Type should be either CREDIT or DEBIT"
         },
-        require: [ true, "Ledger type is required"],
+        required: [ true, "Ledger type is required"],
         immutable: true
     }
 
@@ -35,6 +36,9 @@ const ledgerSchema = new mongoose.Schema({
     timestamps: true
 })
 
+
+ledgerSchema.index({ transaction: 1, account: 1, type: 1 });
+ledgerSchema.index({ account: 1, createdAt: -1 });
 
 function preverntLedgerModification(){
     throw new Error("Ledger entried are immutable and can't be modified or deleted");
