@@ -1,5 +1,6 @@
 const accountModel = require("../models/account.model");
 const ledgerModel = require("../models/ledger.model");
+const { toRupees } = require("../utils/money");
 
 
 async function createAccountController(req, res){
@@ -54,7 +55,7 @@ async function getAccountBalanceController(req, res){
 
   res.status(200).json({
     accountId: account._id,
-    balance: balance
+    balance: toRupees(balance)
   })
 
 }
@@ -72,7 +73,7 @@ async function getTotalBalanceController(req, res) {
   }
 
   res.status(200).json({
-    totalBalance: totalBalance,
+    totalBalance: toRupees(totalBalance),
   });
 }
 
@@ -208,11 +209,14 @@ async function getLedgerEntriesChart(req, res) {
             },
             { amount: 1, type: 1, createdAt: 1, _id: 0 } // projection
         )
-        .sort({ createdAt: 1 }); // sort by creation date for chart display
+        .sort({ createdAt: 1 }).lean(); // sort by creation date for chart display
 
     return res.status(200).json({
         accountId: accountId,
-        transactions: transactions,
+        transactions: transactions.map(tx => ({
+          ...tx,
+          amount: toRupees(tx.amount)
+        })),
     });
 }
 
@@ -249,18 +253,25 @@ async function getLedgerEntriesList(req, res) {
 
     const skip = (parsedPage - 1) * parsedLimit;
 
-    const transactions = await ledgerModel
-      .find({ account: accountId })
-      .select({ amount: 1, type: 1, createdAt: 1, transaction: 1, _id: 0 })
-      .sort({ createdAt: -1 }) // descending order: latest transactions first
-      .skip(skip)
-      .limit(parsedLimit);
+    const [transactions, totalCount] = await Promise.all([
+      ledgerModel
+        .find({ account: accountId })
+        .select({ amount: 1, type: 1, createdAt: 1, transaction: 1, _id: 0 })
+        .sort({ createdAt: -1 }) // descending order: latest transactions first
+        .skip(skip)
+        .limit(parsedLimit)
+        .lean(),
 
-    const totalCount = await ledgerModel.countDocuments({ account: accountId });
+      ledgerModel.countDocuments({ account: accountId }),
+    ]);
+
 
     return res.status(200).json({
         accountId: accountId,
-        transactions: transactions,
+        transactions: transactions.map(tx => ({
+          ...tx,
+          amount: toRupees(tx.amount)
+        })),
         pagination: {
             currentPage: parsedPage,
             totalPages: Math.ceil(totalCount / parsedLimit),

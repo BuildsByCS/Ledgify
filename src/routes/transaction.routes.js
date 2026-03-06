@@ -17,7 +17,7 @@ transactionRoutes.post("/", authMiddleware.authUserMiddleware, transactionContro
  * - get all transactions of the user account with pagination
  */
 
-transactionRoutes.get("/", authMiddleware.authUserMiddleware, transactionController.getAllTransactionsByAccountId)
+transactionRoutes.get("/", authMiddleware.authUserMiddleware, transactionController.getTransactionsHistory)
 
 
 /**

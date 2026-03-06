@@ -1,3 +1,166 @@
+
+# Ledgify
+
+A ledger‑based financial transaction system implementing **ACID‑safe money transfers, idempotent APIs, and double‑entry accounting**.
+
+Built using **Node.js, Express, MongoDB, and Mongoose**.  
+
+The project simulates the architecture used in real financial systems where **balances are derived from immutable ledger entries instead of being directly updated**.
+
+The system supports secure money transfers between accounts, bonus distribution, system‑controlled deposits, and full transaction history while ensuring **data consistency and financial integrity**.
+
+Ledgify follows an **append-only ledger architecture**, similar to systems used in payment processors and financial platforms.
+
+---
+
+
+# Key Features
+
+## Double‑Entry Ledger System
+
+Every financial transaction generates two immutable ledger entries:
+
+```
+Sender Account   => DEBIT
+Receiver Account => CREDIT
+```
+
+Balances are never stored directly and are derived using:
+
+```
+Balance = Total Credits - Total Debits
+```
+
+This ensures:
+
+- complete auditability
+- no balance corruption
+- immutable financial history
+
+---
+
+## ACID Transaction Safety
+
+All financial operations run inside **MongoDB sessions and transactions**.
+
+```
+1) Start Session
+
+2) Create Transaction (PENDING)
+
+3) Create DEBIT Ledger Entry
+
+4) Create CREDIT Ledger Entry
+
+5) Mark Transaction COMPLETED
+
+6) Commit Transaction & end session
+```
+
+If any step fails, the entire operation is **rolled back automatically**, preventing partial transfers.
+
+---
+
+## Idempotent Transaction Processing
+
+To prevent duplicate transfers caused by retries or network failures, every transaction requires a **unique idempotency key**.
+
+If the same request is sent again:
+
+- the system detects the existing transaction
+- returns the previous result instead of executing again
+
+This protects against **duplicate payments and double spending**.
+
+---
+
+## Monetary Precision Handling
+
+All financial values are stored in the smallest currency unit (**paise**) instead of rupees.
+
+Example:
+
+```
+₹100 => 10000 paise
+```
+
+This prevents floating‑point precision errors common in financial calculations.
+
+Utility helpers were implemented:
+
+```
+toPaise()
+toRupees()
+```
+
+---
+
+## Optimized Database Queries
+
+Several optimizations were implemented to improve performance.
+
+### Lean Queries
+
+Used `.lean()` in read-heavy endpoints to return plain JavaScript objects instead of full Mongoose documents, reducing memory overhead and improving query performance.
+
+### Selective Field Projection
+
+Only required fields are fetched from the database using `.select()`, minimizing data transfer and improving response time.
+
+### Compound Indexing
+
+Indexes were added to optimize frequently executed queries such as transaction history and ledger lookups.
+
+## Secure Account Controls
+
+The system supports administrative account controls such as:
+
+- freezing accounts
+- defreezing accounts
+
+System‑level operations are protected by **system user authentication middleware**.
+
+---
+
+## Pagination for Transaction History
+
+Ledger and transaction history endpoints support pagination:
+
+```
+GET /api/transactions?accountId=xxx&page=1&limit=10
+```
+
+This prevents large datasets from affecting API performance.
+
+---
+
+# Tech Stack
+
+## Backend
+
+- Node.js
+- Express.js
+- MongoDB
+- Mongoose
+
+## Concepts Used
+
+- ACID transactions
+- double‑entry ledger accounting
+- idempotent APIs
+- database indexing
+- pagination
+- immutable financial records
+
+---
+
+# Project Purpose
+
+This project was built to understand how **real‑world financial systems manage transactions, consistency, and auditability** using modern backend technologies.
+
+
+---
+
 # API Routes Documentation
 
 This document outlines the API routes for the Ledgify application, detailing their purpose, HTTP methods, endpoints, any applicable middleware, and example outputs.
@@ -18,7 +181,6 @@ This document outlines the API routes for the Ledgify application, detailing the
   - **Output**:
     ```json
     {
-        "success": true,
         "message": "Registration successful",
         "user": {
             "_id": "...",
@@ -161,7 +323,7 @@ This document outlines the API routes for the Ledgify application, detailing the
     ```json
     {
         "accountId": "...",
-        "balance": 0
+        "balance": 0.00
     }
     ```
 
@@ -171,7 +333,7 @@ This document outlines the API routes for the Ledgify application, detailing the
   - **Output**:
     ```json
     {
-        "totalBalance": 15000
+        "totalBalance": 15000.00
     }
     ```
 
