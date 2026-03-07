@@ -313,7 +313,10 @@ async function getTransactionsHistory(req, res){
     const [transactions, totalCount] = await Promise.all([
       ledgerModel
         .find({ account: accountId })
-        .populate("transaction", "_id fromAccount toAccount")
+        .populate({
+          path: "transaction",
+          select: "_id fromAccount toAccount type status",
+        })
         .select({ amount: 1, type: 1, createdAt: 1, transaction: 1, _id: 0 })
         .sort({ createdAt: -1 })
         .skip(skip)
@@ -408,10 +411,9 @@ async function getBonus(req, res) {
      * validate toAccount - must belong to requesting user
      */
 
-      const isValidToAccount = await accountModel.findOne(
-          { _id: toAccount, user: req.user._id, status: "ACTIVE" },
-          { _id: 1 },
-        )
+      const isValidToAccount = await accountModel
+        .findOne({ _id: toAccount, user: req.user._id, status: "ACTIVE" })
+        .select({ _id: 1 })
         .session(session)
         .lean();
 
@@ -594,34 +596,6 @@ async function createInitialFundsTransaction(req, res) {
   const amountInPaise = toPaise(amount);
 
   /**
-   * validate toAccount
-   */
-  const toUserAccount = await accountModel
-    .findOne({ _id: toAccount })
-    .populate("user")
-    .lean();
-
-  if (!toUserAccount) {
-    return res.status(400).json({
-      message: "Invalid toAccount"
-    });
-  }
-
-  /**
-   * validate fromAccount (system user account)
-   */
-  const fromUserAccount = await accountModel
-    .findOne({ user: req.user._id })
-    .select({ _id: 1 })
-    .lean();
-
-  if (!fromUserAccount) {
-    return res.status(400).json({
-      message: "System user account not found"
-    });
-  }
-
-  /**
    * validate idempotency key
    */
   const existingTransaction = await transactionModel
@@ -660,9 +634,36 @@ async function createInitialFundsTransaction(req, res) {
   let transaction;
 
   try {
-
     session = await mongoose.startSession();
     session.startTransaction();
+
+    /**
+     * validate toAccount
+     */
+    const toUserAccount = await accountModel
+      .findOne({ _id: toAccount })
+      .populate("user")
+      .lean();
+
+    if (!toUserAccount) {
+      return res.status(400).json({
+        message: "Invalid toAccount",
+      });
+    }
+
+    /**
+     * validate fromAccount (system user account)
+     */
+    const fromUserAccount = await accountModel
+      .findOne({ user: req.user._id })
+      .select({ _id: 1 })
+      .lean();
+
+    if (!fromUserAccount) {
+      return res.status(400).json({
+        message: "System user account not found",
+      });
+    }
 
     /**
      * create transaction
@@ -670,15 +671,17 @@ async function createInitialFundsTransaction(req, res) {
 
     transaction = (
       await transactionModel.create(
-        [{
-          fromAccount: fromUserAccount._id,
-          toAccount,
-          amount: amountInPaise,
-          type: "DEPOSIT",
-          idempotencyKey,
-          status: "PENDING"
-        }],
-        { session }
+        [
+          {
+            fromAccount: fromUserAccount._id,
+            toAccount,
+            amount: amountInPaise,
+            type: "DEPOSIT",
+            idempotencyKey,
+            status: "PENDING",
+          },
+        ],
+        { session },
       )
     )[0];
 
@@ -687,13 +690,15 @@ async function createInitialFundsTransaction(req, res) {
      */
 
     await ledgerModel.create(
-      [{
-        account: fromUserAccount._id,
-        amount: amountInPaise,
-        transaction: transaction._id,
-        type: "DEBIT"
-      }],
-      { session }
+      [
+        {
+          account: fromUserAccount._id,
+          amount: amountInPaise,
+          transaction: transaction._id,
+          type: "DEBIT",
+        },
+      ],
+      { session },
     );
 
     /**
@@ -701,13 +706,15 @@ async function createInitialFundsTransaction(req, res) {
      */
 
     await ledgerModel.create(
-      [{
-        account: toAccount,
-        amount: amountInPaise,
-        transaction: transaction._id,
-        type: "CREDIT"
-      }],
-      { session }
+      [
+        {
+          account: toAccount,
+          amount: amountInPaise,
+          transaction: transaction._id,
+          type: "CREDIT",
+        },
+      ],
+      { session },
     );
 
     /**
@@ -717,7 +724,7 @@ async function createInitialFundsTransaction(req, res) {
     transaction = await transactionModel.findByIdAndUpdate(
       transaction._id,
       { status: "COMPLETED" },
-      { session, returnDocument: "after" }
+      { session, returnDocument: "after" },
     );
 
     /**
@@ -726,7 +733,6 @@ async function createInitialFundsTransaction(req, res) {
 
     await session.commitTransaction();
     session.endSession();
-
   } catch (error) {
 
     if (session) {
