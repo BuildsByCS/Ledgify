@@ -18,7 +18,7 @@ async function createAccountController(req, res){
 
 
 async function getUserAccountsController(req, res){
-  const accounts = await accountModel.find({ user: req.user._id });
+  const accounts = await accountModel.find({ user: req.user._id }).lean();
 
   res.status(200).json({
     accounts
@@ -28,11 +28,37 @@ async function getUserAccountsController(req, res){
 
 
 async function getAllUsersAccountsController(req, res){
-  const allAccounts = await accountModel.find().populate("user", { "_id": 1, "email": 1, "name": 1 });
 
+  const allAccounts = await accountModel.aggregate([
+    {
+      $lookup: {
+        from: "users",
+        localField: "user",
+        foreignField: "_id",
+        pipeline: [
+          { $match: { systemUser: false } },
+          { $project: { _id: 1, email: 1, name: 1 } }
+        ],
+        as: "user"
+      }
+    },
+    { $unwind: "$user" },   // removes accounts where user didn't match
+    {
+      $project: {
+        _id: 1,
+        user: 1,
+        status: 1,
+        currency: 1,
+        createdAt: 1,
+        updatedAt: 1
+      }
+    }
+  ]);
+
+  
   res.status(200).json({
-    allAccounts: allAccounts
-  })
+    allAccounts: allAccounts,
+  });
 
 }
 
@@ -100,7 +126,7 @@ async function updateAccountStatusController(req, res){
     }, 
     { status: status },
     { new: true }
-  )
+  ).lean();
 
   if(!account){
     return res.status(404).json({
@@ -130,7 +156,7 @@ async function freezeAccountController(req, res){
     { _id: accountId},
     { status: "FROZEN" },
     { new: true }
-  )
+  ).lean();
 
   if(!account){
     return res.status(404).json({
@@ -159,7 +185,7 @@ async function defreezeAccountController(req, res) {
     { _id: accountId },
     { status: "ACTIVE" },
     { new: true },
-  );
+  ).lean();
 
   if (!account) {
     return res.status(404).json({
@@ -186,7 +212,7 @@ async function getLedgerEntriesChart(req, res) {
     const account = await accountModel.findOne({
         _id: accountId,
         user: req.user._id,
-    });
+    }).lean();
 
     if (!account) {
         return res.status(404).json({
@@ -233,7 +259,7 @@ async function getLedgerEntriesList(req, res) {
     const account = await accountModel.findOne({
         _id: accountId,
         user: req.user._id,
-    });
+    }).lean();
 
     if (!account) {
         return res.status(404).json({
