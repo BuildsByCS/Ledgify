@@ -384,12 +384,16 @@ This document outlines the API routes for the Ledgify application, detailing the
     }
     ```
 
-- **`POST /api/accounts/update-status?accountId=xxx&status=ACTIVE/CLOSED`**
+- **`POST /api/accounts/update-status`**
   - **Description**: Update an account's status to ACTIVE or CLOSED.
-  - **Parameters**:
-    - `accountId`: string (Query parameter) - The ID of the account.
-    - `status`: string (Query parameter) - The new status of the account (ACTIVE or CLOSED).
   - **Access**: Protected (`authMiddleware.authUserMiddleware`)
+  - **Input**:
+    ```json
+    {
+        "accountId": "...",
+        "status": "CLOSED/ACTIVE"
+    }
+    ```
   - **Output**:
     ```json
     {
@@ -397,7 +401,7 @@ This document outlines the API routes for the Ledgify application, detailing the
         "account": {
             "_id": "...",
             "user": "...",
-            "status": "CLOSED",
+            "status": "CLOSED/ACTIVE/FROZEN",
             "currency": "INR",
             "createdAt": "2026-02-27T06:21:08.798Z",
             "updatedAt": "2026-02-27T06:35:25.027Z",
@@ -406,11 +410,16 @@ This document outlines the API routes for the Ledgify application, detailing the
     }
     ```
 
-- **`POST /api/accounts/freeze/:accountId`**
-  - **Description**: Freezes a specific account. Only accessible by a system user.
-  - **Parameters**:
-    - `accountId`: string (URL parameter) - The ID of the account.
+- **`POST /api/accounts/system-update-status`**
+  - **Description**: Updates an account status to FROZEN, ACTIVE, CLOSED.
   - **Access**: Protected (Requires system user authentication via `authMiddleware.authSystemUserMiddleware`)
+  - **Input**:
+    ```json
+    {
+        "accountId": "...",
+        "status": "CLOSED"
+    }
+    ```
   - **Output**:
     ```json
     {
@@ -427,26 +436,6 @@ This document outlines the API routes for the Ledgify application, detailing the
     }
     ```
 
-- **`POST /api/accounts/defreeze/:accountId`**
-  - **Description**: DeFreezes a specific account & make it ACTIVE for user. Only accessible by a system user.
-  - **Parameters**:
-    - `accountId`: string (URL parameter) - The ID of the account.
-  - **Access**: Protected (Requires system user authentication via `authMiddleware.authSystemUserMiddleware`)
-  - **Output**:
-    ```json
-    {
-        "message": "Successfully defrozen and activated the account",
-        "account": {
-            "_id": "...",
-            "user": "...",
-            "status": "ACTIVE",
-            "currency": "INR",
-            "createdAt": "2026-02-12T13:47:33.420Z",
-            "updatedAt": "2026-02-27T07:01:51.922Z",
-            "__v": 0
-        }
-    }
-    ```
 
 ## Transaction Routes
 
@@ -497,7 +486,9 @@ This document outlines the API routes for the Ledgify application, detailing the
                 "transaction": {
                     "_id": "...id",
                     "fromAccount": "...id",
-                    "toAccount": "...id"
+                    "toAccount": "...id",
+                    "type": "TRANSFER/DEPOSITE/REFUND/FAILED",
+                    "status": "COMPLETED"
                 },
                 "type": "DEBIT",
                 "createdAt": "2026-03-04T12:09:48.835Z"
@@ -531,6 +522,7 @@ This document outlines the API routes for the Ledgify application, detailing the
               "_id": "...id",
               "fromAccount": "...id",
               "toAccount": "...id",
+              "type": "BONUS",
               "status": "COMPLETED",
               "amount": 1000,
               "idempotencyKey": "bonus-019cb929-d964-7918-bae9-f867d1de01c0",
@@ -561,6 +553,7 @@ This document outlines the API routes for the Ledgify application, detailing the
             "_id": "...",
             "fromAccount": "...id",
             "toAccount": "...id",
+            "type": "DEPOSITE",
             "status": "COMPLETED",
             "amount": 500,
             "idempotencyKey": "019c619c-5920-7d06-a45j-3cc50a3b905a",

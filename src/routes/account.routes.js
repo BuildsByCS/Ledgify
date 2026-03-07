@@ -58,26 +58,18 @@ router.get("/ledger-list", authMiddleware.authUserMiddleware, accountController.
 
 
 /**
- * - POST /api/accounts/update-status?accountId=xxx&status=ACTIVE/CLOSED
+ * - POST /api/accounts/update-status
  * - update account status to ACTIVE or CLOSED
  */
 router.post("/update-status", authMiddleware.authUserMiddleware, accountController.updateAccountStatusController);
 
 
 /**
- * - POST /api/accounts/freeze/:accountId
- * - freeze an account
- * - protected route, only system user can freeze an account
+ * - POST /api/accounts/system-update-status
+ * - update account status to ACTIVE, CLOSED or FROZEN
+ * - protected route, only system user can access this route
  */
-router.post("/freeze/:accountId", authMiddleware.authSystemUserMiddleware, accountController.freezeAccountController);
-
-
-/**
- * - POST /api/accounts/defreeze/:accountId
- * - defreeze an account and ACTIVE it again
- * - protected route, only system user can defreeze an account
- */
-router.post("/defreeze/:accountId", authMiddleware.authSystemUserMiddleware, accountController.defreezeAccountController);
+router.post("/system-update-status", authMiddleware.authSystemUserMiddleware, accountController.updateAccountStatusSystemController);
 
 
 module.exports = router;

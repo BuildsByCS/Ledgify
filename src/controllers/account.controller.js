@@ -105,10 +105,10 @@ async function getTotalBalanceController(req, res) {
 
 
 async function updateAccountStatusController(req, res){
-  const { accountId, status } = req.query;
+  const { accountId, status } = req.body;
 
   if(!accountId || !status){
-    return res.statu(400).json({
+    return res.status(400).json({
       message: "accountId and status query parameters are required"
     })
   }
@@ -119,20 +119,32 @@ async function updateAccountStatusController(req, res){
     })
   }
 
-  const account = await accountModel.findOneAndUpdate(
-    {
+  const account = await accountModel.findOne({
       _id: accountId,
       user: req.user._id
-    }, 
-    { status: status },
-    { new: true }
-  ).lean();
+    }
+  );
 
   if(!account){
     return res.status(404).json({
       message: "Account not found for the user"
     })
   }
+
+  if(account.status === "FROZEN"){
+    return res.status(400).json({
+      message: "Account is Frozen by system user. Please contact support."
+    })
+  }
+
+  if (account.status === status) {
+    return res.status(400).json({
+      message: `Account is already ${status}`,
+    });
+  }
+
+  account.status = status;
+  await account.save();
 
   return res.status(200).json({
     message: "Account status updated successfully",
@@ -141,51 +153,25 @@ async function updateAccountStatusController(req, res){
 
 }
 
+async function updateAccountStatusSystemController(req, res) {
 
-async function freezeAccountController(req, res){
+  const { accountId, status } = req.body;
 
-  const accountId = req.params.accountId;
-
-  if(!accountId){
+  if (!accountId || !status) {
     return res.status(400).json({
-      message: "accountId parameter is required"
-    })
-  }
-
-  const account = await accountModel.findOneAndUpdate(
-    { _id: accountId},
-    { status: "FROZEN" },
-    { new: true }
-  ).lean();
-
-  if(!account){
-    return res.status(404).json({
-      message: "Account not found"
-    })
-  }
-
-  return res.status(200).json({
-    message: "Account frozen successfully",
-    account
-  })
-
-}
-
-
-async function defreezeAccountController(req, res) {
-  const accountId = req.params.accountId;
-
-  if (!accountId) {
-    return res.status(400).json({
-      message: "accountId parameter is required",
+      message: "accountId and status are required"
     });
   }
 
-  const account = await accountModel.findOneAndUpdate(
-    { _id: accountId },
-    { status: "ACTIVE" },
-    { new: true },
-  ).lean();
+  const allowedStatuses = ["ACTIVE", "CLOSED", "FROZEN"];
+
+  if (!allowedStatuses.includes(status)) {
+    return res.status(400).json({
+      message: "Invalid status value. Allowed values: ACTIVE, CLOSED, FROZEN"
+    });
+  }
+
+  let account = await accountModel.findById(accountId);
 
   if (!account) {
     return res.status(404).json({
@@ -193,10 +179,33 @@ async function defreezeAccountController(req, res) {
     });
   }
 
+  if (account.status === status) {
+    return res.status(400).json({
+      message: `Account is already ${status}`,
+    });
+  }
+
+  if(account.status === "FROZEN" && status === "CLOSED"){
+    return res.status(400).json({
+      message: "Cannot directly close a frozen account. Please activate it first."
+    })
+  }
+
+  if(account.status === "CLOSED" && status === "FROZEN"){
+    return res.status(400).json({
+      message: "Cannot freeze a closed account. Please activate it first."
+    })
+  }
+
+  account.status = status;
+  await account.save();
+
+
   return res.status(200).json({
-    message: "Successfully defrozen and activated the account",
-    account,
+    message: `Account status updated successfully to ${status}`,
+    account
   });
+
 }
 
 
@@ -316,8 +325,7 @@ module.exports = {
   getAccountBalanceController,
   getTotalBalanceController,
   updateAccountStatusController,
-  freezeAccountController,
-  defreezeAccountController,
+  updateAccountStatusSystemController,
   getLedgerEntriesChart,
   getLedgerEntriesList,
 };
