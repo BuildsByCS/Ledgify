@@ -56,7 +56,7 @@ async function userRegisterController(req, res){
 async function userLoginController(req, res){
     const { email, password } = req.body;
 
-    const user = await userModel.findOne({ email}).select("+password");
+    const user = await userModel.findOne({ email}).select("+password +systemUser");
 
     if(!user){
       return res.status(404).json({
@@ -86,7 +86,8 @@ async function userLoginController(req, res){
       user: {
         _id: user._id,
         email: user.email,
-        name: user.name
+        name: user.name,
+        systemUser: user.systemUser,
       },
       token
     });
@@ -110,7 +111,7 @@ async function getCurrentUserController(req, res){
 
   const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-  const user = await userModel.findById(decoded.userId);
+  const user = await userModel.findById(decoded.userId).select("+systemUser");
 
   if(!user){
     return res.status(404).json({
@@ -122,7 +123,8 @@ async function getCurrentUserController(req, res){
     user: {
       _id: user._id,
       email: user.email,
-      name: user.name
+      name: user.name,
+      systemUser: user.systemUser
     }
   })
 
