@@ -327,6 +327,19 @@ This document outlines the API routes for the Ledgify application, detailing the
     }
     ```
 
+- **`GET /api/accounts/userbalance/:accountId`**
+  - **Description**: Fetches the balance of a specific given user account from the system user login.
+  - **Parameters**:
+    - `accountId`: string (URL parameter) - The ID of the account.
+  - **Access**: Protected (`authMiddleware.authSystemUserMiddleware`)
+  - **Output**:
+    ```json
+    {
+        "accountId": "...",
+        "balance": 0.00
+    }
+    ```
+
 - **`GET /api/accounts/total-balance`**
   - **Description**: Retrieves the total balance across all financial accounts for the logged-in user.
   - **Access**: Protected (`authMiddleware.authUserMiddleware`)
@@ -363,6 +376,35 @@ This document outlines the API routes for the Ledgify application, detailing the
     - `page`: number (Query parameter) - The page number for pagination.
     - `limit`: number (Query parameter) - The number of entries per page.
   - **Access**: Protected (`authMiddleware.authUserMiddleware`)
+  - **Output**:
+    ```json
+    {
+        "accountId": "...",
+        "transactions": [
+            {
+                "amount": 15000,
+                "transaction": "...",
+                "type": "CREDIT",
+                "createdAt": "2026-02-26T06:26:43.769Z"
+            }
+        ],
+        "pagination": {
+            "currentPage": 1,
+            "totalPages": 1,
+            "totalEntries": 1,
+            "limit": 10
+        }
+    }
+    ```
+
+
+- **`GET /api/accounts/user-ledger-list?accountId=xxx&page=1&limit=10`**
+  - **Description**: Get paginated ledger entries for list display of a specific user account identified by `accountId` from the system user login.
+  - **Parameters**:
+    - `accountId`: string (Query parameter) - The ID of the account.
+    - `page`: number (Query parameter) - The page number for pagination.
+    - `limit`: number (Query parameter) - The number of entries per page.
+  - **Access**: Protected (`authMiddleware.authSystemUserMiddleware`)
   - **Output**:
     ```json
     {

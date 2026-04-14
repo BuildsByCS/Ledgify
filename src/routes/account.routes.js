@@ -37,6 +37,14 @@ router.get("/balance/:accountId", authMiddleware.authUserMiddleware, accountCont
 
 
 /**
+ * - GET /api/accounts/userbalance/:accountId
+ * - get balance of a specific account
+ * - protected route, only system user can access this route
+ */
+
+router.get("/userbalance/:accountId", authMiddleware.authSystemUserMiddleware, accountController.getUsersAccountBalanceController)
+
+/**
  * - GET /api/accounts/total-balance
  * - get total balance of all accounts of the logged in user
  */
@@ -55,6 +63,14 @@ router.get("/ledger-chart/:accountId", authMiddleware.authUserMiddleware, accoun
  * - Get paginated ledger entries for list display
  */
 router.get("/ledger-list", authMiddleware.authUserMiddleware, accountController.getLedgerEntriesList );
+
+
+/**
+ * - GET /api/accounts/user-ledger-list?accountId=xxx&page=1&limit=10
+ * - Get paginated ledger entries for list display of any user account
+ * - protected route, only system user can access this route
+ */
+router.get("/user-ledger-list", authMiddleware.authSystemUserMiddleware, accountController.getUserLedgerEntriesList );
 
 
 /**
